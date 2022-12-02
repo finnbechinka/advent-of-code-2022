@@ -3,28 +3,38 @@ use std::io::prelude::*;
 
 fn main() {
   println!("start");
-  let input = read_file("input.txt");
-  let calories = elf_calories(input);
-  output_most_calories(&calories);
-  output_top3_calories(&calories);
+  let input: String = read_file("input.txt");
+  let calories: Vec<u32> = elf_calories(input);
+  let (max_elf, max_calories): (usize, u32) = find_most_calories(&calories);
+  println!("elf {max_elf} has the most calories with: {max_calories}\n");
+  let top: (Vec<(u16, u32)>, u32) = output_top_calories(&calories, 3);
+  for (index, value) in top.0.iter().enumerate() {
+    println!(
+      "elf {} has the {}. most calories with: {}\n",
+      value.0,
+      index + 1,
+      value.1
+    );
+  }
+  println!("totaling: {} calories", top.1);
   println!("end");
 }
 
 fn read_file(path: &str) -> String {
-  let mut error_msg = String::from("error reading file: ");
+  let mut error_msg: String = String::from("error reading file: ");
   error_msg.push_str(&path);
 
-  let mut file = File::open(path).expect(&error_msg);
+  let mut file: File = File::open(path).expect(&error_msg);
 
-  let mut contents = String::new();
+  let mut contents: String = String::new();
   file.read_to_string(&mut contents).expect(&error_msg);
 
-  return contents;
+  contents
 }
 
 fn elf_calories(input: String) -> Vec<u32> {
-  let mut calories = Vec::new();
-  let mut current_elf = 0;
+  let mut calories: Vec<u32> = Vec::new();
+  let mut current_elf: usize = 0;
   for line in input.lines() {
     if line == "" {
       current_elf = current_elf + 1;
@@ -39,10 +49,10 @@ fn elf_calories(input: String) -> Vec<u32> {
       }
     }
   }
-  return calories;
+  calories
 }
 
-fn output_most_calories(calories: &Vec<u32>) {
+fn find_most_calories(calories: &Vec<u32>) -> (usize, u32) {
   let mut max_elf: usize = 0;
   let mut max_calories: u32 = 0;
   for (curr_elf, curr_calories) in calories.iter().enumerate() {
@@ -51,49 +61,26 @@ fn output_most_calories(calories: &Vec<u32>) {
       max_calories = *curr_calories;
     }
   }
-  println!("elf {max_elf} has the most calories with: {max_calories}\n");
+
+  (max_elf, max_calories)
 }
 
-fn output_top3_calories(calories: &Vec<u32>) {
-  let mut top3_elfs = [0, 0, 0];
-  let mut top3_calories = [0, 0, 0];
+fn output_top_calories(calories: &Vec<u32>, count: usize) -> (Vec<(u16, u32)>, u32) {
+  let mut top: Vec<(u16, u32)> = Vec::new();
+  for _ in 0..count {
+    top.push((0, 0));
+  }
   for (curr_elf, curr_calories) in calories.iter().enumerate() {
-    if curr_calories > &top3_calories[0] {
-      top3_elfs[2] = top3_elfs[1];
-      top3_elfs[1] = top3_elfs[0];
-      top3_elfs[0] = curr_elf;
-
-      top3_calories[2] = top3_calories[1];
-      top3_calories[1] = top3_calories[0];
-      top3_calories[0] = *curr_calories;
-    } else if curr_calories > &top3_calories[1] {
-      top3_elfs[2] = top3_elfs[1];
-      top3_elfs[1] = curr_elf;
-
-      top3_calories[2] = top3_calories[1];
-      top3_calories[1] = *curr_calories;
-    } else if curr_calories > &top3_calories[2] {
-      top3_elfs[2] = curr_elf;
-
-      top3_calories[2] = *curr_calories;
+    for i in 0..count {
+      if *curr_calories > top[i].1 {
+        for j in (i + 1..count).rev() {
+          top[j] = top[j - 1];
+        }
+        top[i] = (curr_elf as u16, *curr_calories);
+        break;
+      }
     }
   }
-
-  println!(
-    "elf {} has the third most calories with: {}",
-    top3_elfs[2], top3_calories[2]
-  );
-  println!(
-    "elf {} has the second most calories with: {}",
-    top3_elfs[1], top3_calories[1]
-  );
-  println!(
-    "elf {} has the most calories with: {}",
-    top3_elfs[0], top3_calories[0]
-  );
-
-  println!(
-    "totaling: {}",
-    top3_calories[0] + top3_calories[1] + top3_calories[2]
-  );
+  let total: u32 = top.iter().map(|&(_, cals)| cals).sum();
+  (top, total)
 }
